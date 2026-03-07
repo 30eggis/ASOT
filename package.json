@@ -1,0 +1,22 @@
+{
+  "name": "asot",
+  "version": "0.1.0",
+  "description": "AI Sessions On Telegram for Claude Code and Codex",
+  "type": "module",
+  "bin": {
+    "asot": "./src/cli.js"
+  },
+  "scripts": {
+    "start": "node ./src/cli.js",
+    "doctor": "node ./src/cli.js doctor",
+    "init": "node ./src/cli.js init"
+  },
+  "keywords": [
+    "telegram",
+    "claude-code",
+    "codex",
+    "tmux",
+    "daemon"
+  ],
+  "license": "MIT"
+}
