@@ -1006,7 +1006,11 @@ def run_codex_and_send(bridge, cmd, cwd, fallback_msg, session_id="", message_th
     with tempfile.NamedTemporaryFile(prefix="codex_reply_", suffix=".txt", delete=False) as tmp:
         out_file = tmp.name
 
-    full_cmd = cmd + ["-o", out_file]
+    full_cmd = list(cmd)
+    if len(full_cmd) >= 3 and full_cmd[1:3] == ["exec", "resume"]:
+        full_cmd = full_cmd[:3] + ["-o", out_file] + full_cmd[3:]
+    else:
+        full_cmd += ["-o", out_file]
     run_cwd = cwd if cwd and os.path.isdir(cwd) else str(HOME)
 
     try:
@@ -1116,10 +1120,10 @@ def resume_codex_session(bridge, session_id, cwd, reply_text, message_thread_id=
         bridge.cli_bin,
         "exec",
         "resume",
-        session_id,
-        tagged_text,
         "--full-auto",
         "--skip-git-repo-check",
+        session_id,
+        tagged_text,
     ]
     run_codex_and_send(
         bridge,
@@ -1139,9 +1143,9 @@ def resume_codex_last(bridge, reply_text, message_thread_id=None):
         "exec",
         "resume",
         "--last",
-        tagged_text,
         "--full-auto",
         "--skip-git-repo-check",
+        tagged_text,
     ]
     run_codex_and_send(
         bridge,
