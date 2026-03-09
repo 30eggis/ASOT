@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { runInit } from "./lib/init.js";
 import { resolvePaths } from "./lib/paths.js";
+import { runUninstall } from "./lib/uninstall.js";
 
 function parseArgs(argv) {
   const result = {
@@ -43,6 +44,7 @@ function printHelp() {
 
 Usage:
   asot init [--home DIR] [--bot-token TOKEN] [--chat-id CHAT_ID]
+  asot uninstall [--home DIR]
   asot doctor [--home DIR]
   asot start [--home DIR]
   asot stop [--home DIR]
@@ -162,6 +164,18 @@ async function main() {
       if (result.values.installLaunchd) {
         console.log(`launchd: ${result.paths.launchAgentPath}`);
       }
+      return;
+    }
+    case "uninstall": {
+      const result = await runUninstall({
+        homeDir: argv.home,
+        shellRc: argv["shell-rc"]
+      });
+      console.log(`ASOT uninstall complete`);
+      console.log(`config removed: ${result.paths.configDir}`);
+      console.log(`share removed: ${result.paths.shareDir}`);
+      console.log(`state removed: ${result.paths.stateDir}`);
+      console.log(`shell cleaned: ${result.paths.shellRc}`);
       return;
     }
     case "doctor":

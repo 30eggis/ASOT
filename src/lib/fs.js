@@ -61,3 +61,22 @@ export async function patchManagedBlock(targetPath, startMarker, endMarker, bloc
 
   await writeFileEnsured(targetPath, next);
 }
+
+export async function removeManagedBlock(targetPath, startMarker, endMarker) {
+  if (!(await pathExists(targetPath))) {
+    return false;
+  }
+
+  const content = await fs.readFile(targetPath, "utf8");
+  const escapedStart = startMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedEnd = endMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`${escapedStart}[\\s\\S]*?${escapedEnd}\\n?`, "m");
+
+  if (!pattern.test(content)) {
+    return false;
+  }
+
+  const next = content.replace(pattern, "").replace(/\n{3,}/g, "\n\n").replace(/^\s+$/gm, "");
+  await writeFileEnsured(targetPath, next.trim() ? `${next.trimEnd()}\n` : "");
+  return true;
+}
