@@ -951,11 +951,22 @@ def maybe_reveal_tmux_session_in_iterm(bridge, session_name, pane_target=""):
 def reveal_registered_tmux_session(bridge, cwd):
     info = get_registered_tmux_entry(bridge, cwd)
     if not info:
-        return
+        return False, "no registered tmux entry"
     session_name = str(info.get("session_name", "")).strip()
     target = str(info.get("target", "")).strip()
-    if session_name:
-        maybe_reveal_tmux_session_in_iterm(bridge, session_name, target)
+    if not session_name:
+        return False, "registered tmux entry has no session name"
+    return maybe_reveal_tmux_session_in_iterm(bridge, session_name, target)
+
+
+def log_reveal_result(bridge, cwd, context):
+    revealed, detail = reveal_registered_tmux_session(bridge, cwd)
+    status = "attached" if revealed else "skipped"
+    print(
+        f"[GUI] {bridge.agent} reveal {status} context={context} cwd={cwd or '-'} detail={detail}",
+        flush=True,
+    )
+    return revealed, detail
 
 
 def log_chat(bridge, role, text, folder=""):
@@ -1257,7 +1268,7 @@ def handle_mapped_reply(bridge, reply_msg_id, reply_text, in_chat, message_threa
 
     ok, detail = forward_reply_via_tmux(bridge, cwd, reply_text)
     if ok:
-        reveal_registered_tmux_session(bridge, cwd)
+        log_reveal_result(bridge, cwd, "mapped_reply")
         print(f"[TMUX] {bridge.agent} forwarded reply target={detail}", flush=True)
         return True
 
@@ -1292,7 +1303,7 @@ def handle_thread_reply(bridge, reply_text, in_chat, message_thread_id):
 
     ok, detail = forward_reply_via_tmux(bridge, cwd, reply_text)
     if ok:
-        reveal_registered_tmux_session(bridge, cwd)
+        log_reveal_result(bridge, cwd, "thread_reply")
         print(f"[TMUX] {bridge.agent} forwarded thread reply target={detail}", flush=True)
         return True
 
@@ -1345,7 +1356,7 @@ def handle_bridge_fallback(bridge, reply_text, in_chat, message_thread_id, candi
 
     ok, detail = forward_reply_via_tmux(bridge, default_cwd, reply_text)
     if ok:
-        reveal_registered_tmux_session(bridge, default_cwd)
+        log_reveal_result(bridge, default_cwd, "bridge_fallback")
         print(f"[TMUX] {bridge.agent} forwarded fallback reply target={detail}", flush=True)
         return True
 
