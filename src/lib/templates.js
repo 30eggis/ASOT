@@ -21,6 +21,8 @@ export function renderEnvFile(values) {
 
 export function renderShellBlock(paths) {
   return `
+unalias cl cld cdx tg-history tg-monitor 2>/dev/null || true
+
 cl() {
   if [ -n "$TMUX" ]; then
     bash "${paths.claudeHooksDir}/claude-tmux-register.sh" >/dev/null 2>&1 || true
@@ -30,10 +32,21 @@ cl() {
   fi
 }
 
-alias cld='cl --dangerously-skip-permissions'
-alias cdx='${paths.codexDir}/codex-tmux-launch.sh --attach --'
-alias tg-history='bash ${paths.claudeHooksDir}/telegram-history.sh'
-alias tg-monitor='tail -f ${paths.claudeStateDir}/chat.log'
+cld() {
+  cl --dangerously-skip-permissions "$@"
+}
+
+cdx() {
+  "${paths.codexDir}/codex-tmux-launch.sh" --attach -- "$@"
+}
+
+tg-history() {
+  bash "${paths.claudeHooksDir}/telegram-history.sh" "$@"
+}
+
+tg-monitor() {
+  tail -f "${paths.claudeStateDir}/chat.log"
+}
 `.trim();
 }
 
