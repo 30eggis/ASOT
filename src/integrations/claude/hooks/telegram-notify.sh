@@ -42,9 +42,9 @@ try:
 except Exception:
     raise SystemExit(0)
 
+session_id = str(data.get("session_id", os.environ.get("CLAUDE_SESSION_ID", ""))).strip()
+cwd = str(data.get("cwd", os.environ.get("CLAUDE_PROJECT_DIR", ""))).strip()
 folder_name = get_folder_name(data)
-session_id = str(data.get("session_id", "")).strip()
-cwd = str(data.get("cwd", "")).strip()
 stop_reason = str(data.get("stop_reason", "")).strip()
 
 last_msg = data.get("last_assistant_message", "")
