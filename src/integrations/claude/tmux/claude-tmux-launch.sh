@@ -48,9 +48,16 @@ print(Path(sys.argv[1]).expanduser().resolve())
 PY
 )"
 
+sanitize_name() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_' | sed 's/^_\\+//; s/_\\+$//'
+}
+
 if [[ -z "$session_name" ]]; then
-  base_name="$(basename "$cwd" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_')"
+  base_name="$(sanitize_name "$(basename "$cwd")")"
+  [[ -n "$base_name" ]] || base_name="claude"
   session_name="claude_${base_name}"
+else
+  session_name="$(sanitize_name "$session_name")"
 fi
 
 has_skip_permissions=0
@@ -65,8 +72,14 @@ if [[ "$has_skip_permissions" == "0" ]]; then
 fi
 
 if tmux has-session -t "$session_name" 2>/dev/null; then
+  main_target="$(tmux list-panes -t "$session_name" -F '#{pane_id}' | head -n 1)"
+  "$REGISTER_SCRIPT" --cwd "$cwd" --target "$main_target" >/dev/null 2>&1 || true
   echo "session already exists: $session_name" >&2
-  exit 1
+  echo "attach: tmux attach -t $session_name"
+  if [[ "$attach_mode" == "1" ]]; then
+    exec tmux attach -t "$session_name"
+  fi
+  exit 0
 fi
 
 tmux new-session -d -s "$session_name" -c "$cwd" "$CLAUDE_BIN" "${claude_args[@]}"

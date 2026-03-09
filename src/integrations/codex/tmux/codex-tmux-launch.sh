@@ -44,9 +44,16 @@ print(Path(sys.argv[1]).expanduser().resolve())
 PY
 )"
 
+sanitize_name() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_' | sed 's/^_\\+//; s/_\\+$//'
+}
+
 if [[ -z "$session_name" ]]; then
-  base_name="$(basename "$cwd" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_')"
+  base_name="$(sanitize_name "$(basename "$cwd")")"
+  [[ -n "$base_name" ]] || base_name="codex"
   session_name="codex_${base_name}"
+else
+  session_name="$(sanitize_name "$session_name")"
 fi
 
 cmd="$CODEX_BIN"

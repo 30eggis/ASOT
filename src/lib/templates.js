@@ -28,7 +28,7 @@ cl() {
     bash "${paths.claudeHooksDir}/claude-tmux-register.sh" >/dev/null 2>&1 || true
     claude --dangerously-skip-permissions "$@"
   else
-    "${paths.claudeHooksDir}/claude-tmux-launch.sh" --cwd "$PWD" --session "claude_$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_')" --attach -- "$@"
+    "${paths.claudeHooksDir}/claude-tmux-launch.sh" --cwd "$PWD" --session "claude_$(printf '%s' "$(basename "$PWD")" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_' | sed 's/^_\\+//; s/_\\+$//')" --attach -- "$@"
   fi
 }
 
