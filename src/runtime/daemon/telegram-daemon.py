@@ -32,6 +32,7 @@ CLAUDE_HISTORY_FILE = HOME / ".claude" / "history.jsonl"
 ASOT_ENV_FILE = CONFIG_DIR / "asot.env"
 CLAUDE_BASE_DIR = HOME / ".claude" / "hooks" / "asot"
 CODEX_BASE_DIR = HOME / ".codex" / "asot"
+MACOS_HELPER_SCRIPT = SHARE_DIR / "runtime" / "platform" / "macos" / "open-tmux-session-in-iterm.sh"
 
 
 @dataclass
@@ -954,7 +955,7 @@ def launch_claude_tmux_resume(bridge, session_id, cwd, allow_retry=True):
 
 
 def reveal_tmux_session_in_iterm(session_name, pane_target=""):
-    helper_script = BASE_DIR / "open-tmux-session-in-iterm.sh"
+    helper_script = MACOS_HELPER_SCRIPT
     if not session_name or not helper_script.exists():
         return False, "iTerm helper missing"
 
