@@ -15,6 +15,7 @@ STATE_DIR = STATE_ROOT / AGENT
 MAPPING_FILE = STATE_DIR / "msg_session_map.json"
 TOPIC_STATE_FILE = STATE_DIR / "topic_sessions.json"
 CHAT_LOG_FILE = STATE_DIR / "chat.log"
+CLAUDE_HISTORY_FILE = HOME / ".claude" / "history.jsonl"
 MAX_MSG_LENGTH = 4000
 
 
@@ -70,6 +71,64 @@ def get_folder_name(data_or_cwd):
         return Path(cwd).name or str(cwd)
     except Exception:
         return str(cwd)
+
+
+def iter_claude_history_reverse():
+    try:
+        lines = CLAUDE_HISTORY_FILE.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return
+
+    for raw in reversed(lines):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            record = json.loads(raw)
+        except Exception:
+            continue
+        yield record
+
+
+def infer_claude_session_id_from_history(cwd):
+    normalized_cwd = normalize_cwd(cwd)
+    if not normalized_cwd:
+        return ""
+
+    for record in iter_claude_history_reverse() or []:
+        project_dir = normalize_cwd(record.get("project", ""))
+        session_id = str(record.get("sessionId", "")).strip()
+        if project_dir == normalized_cwd and session_id:
+            return session_id
+    return ""
+
+
+def extract_claude_session_info(data):
+    session_id = ""
+    if isinstance(data, dict):
+        session_id = str(
+            data.get("session_id")
+            or data.get("sessionId")
+            or data.get("id")
+            or os.environ.get("CLAUDE_SESSION_ID", "")
+        ).strip()
+        cwd = str(
+            data.get("cwd")
+            or data.get("project")
+            or data.get("project_dir")
+            or os.environ.get("ASOT_PROJECT_DIR", "")
+            or os.environ.get("CLAUDE_PROJECT_DIR", "")
+        ).strip()
+    else:
+        cwd = str(
+            os.environ.get("ASOT_PROJECT_DIR", "")
+            or os.environ.get("CLAUDE_PROJECT_DIR", "")
+        ).strip()
+
+    if not session_id and cwd:
+        session_id = infer_claude_session_id_from_history(cwd)
+
+    return session_id, cwd
 
 
 def trim_text(text, limit):
@@ -409,4 +468,3 @@ def resolve_destination(bot_token, chat_id, session_id="", cwd="", preferred_thr
         return normalize_chat_id(entry.get("chat_id") or chat_id), normalize_thread_id(entry.get("message_thread_id"))
 
     return normalize_chat_id(chat_id), None
-

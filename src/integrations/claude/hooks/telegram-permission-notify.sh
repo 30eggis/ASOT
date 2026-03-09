@@ -24,6 +24,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.environ.get("ASOT_SHARE_DIR", os.path.expanduser("~/.local/share/asot")), "runtime", "python"))
 from telegram_common import (
+    extract_claude_session_info,
     get_env,
     get_folder_name,
     register_topic_binding,
@@ -41,8 +42,7 @@ try:
 except Exception:
     raise SystemExit(0)
 
-session_id = str(data.get("session_id", os.environ.get("CLAUDE_SESSION_ID", ""))).strip()
-cwd = str(data.get("cwd", os.environ.get("CLAUDE_PROJECT_DIR", ""))).strip()
+session_id, cwd = extract_claude_session_info(data)
 folder_name = get_folder_name(data)
 
 tool_name = str(data.get("tool_name", "")).strip()
