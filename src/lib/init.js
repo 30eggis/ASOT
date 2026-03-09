@@ -78,6 +78,28 @@ function resolveSource(relativePath) {
   return path.join(repoRoot, relativePath);
 }
 
+function stripLegacyShellAliases(content) {
+  return content
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim();
+      return !/^(?:alias|unalias)\s+(?:cl|cld|cdx|tg-history|tg-monitor)(?:\b|=)/.test(trimmed);
+    })
+    .join("\n");
+}
+
+async function sanitizeShellRc(shellRcPath) {
+  if (!(await pathExists(shellRcPath))) {
+    return;
+  }
+
+  const content = await fs.readFile(shellRcPath, "utf8");
+  const cleaned = stripLegacyShellAliases(content);
+  if (cleaned !== content) {
+    await writeFileEnsured(shellRcPath, cleaned);
+  }
+}
+
 async function copyInstallFiles(paths) {
   const copies = [
     ["src/runtime/daemon/telegram-daemon.py", path.join(paths.runtimeDaemonDir, "telegram-daemon.py"), 0o755],
@@ -201,6 +223,7 @@ export async function runInit(args = {}) {
   await copyInstallFiles(paths);
   await patchClaudeSettings(paths);
   await backupIfNeeded(paths.shellRc);
+  await sanitizeShellRc(paths.shellRc);
   await patchManagedBlock(
     paths.shellRc,
     START_MARKER,
@@ -215,4 +238,3 @@ export async function runInit(args = {}) {
 
   return { paths, values };
 }
-
