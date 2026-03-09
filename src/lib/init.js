@@ -169,6 +169,27 @@ async function patchClaudeSettings(paths) {
   await writeFileEnsured(settingsPath, `${JSON.stringify(merged, null, 2)}\n`);
 }
 
+async function resetRuntimeState(paths) {
+  const resetFiles = [
+    path.join(paths.claudeStateDir, "msg_session_map.json"),
+    path.join(paths.claudeStateDir, "topic_sessions.json"),
+    path.join(paths.claudeStateDir, "tmux_sessions.json"),
+    path.join(paths.codexStateDir, "msg_session_map.json"),
+    path.join(paths.codexStateDir, "topic_sessions.json"),
+    path.join(paths.codexStateDir, "tmux_sessions.json"),
+    path.join(paths.stateDir, "daemon.pid")
+  ];
+
+  await Promise.all(resetFiles.map((filePath) => fs.rm(filePath, { force: true })));
+
+  const stateEntries = await fs.readdir(paths.stateDir, { withFileTypes: true }).catch(() => []);
+  await Promise.all(
+    stateEntries
+      .filter((entry) => entry.isFile() && /^offset_[a-f0-9]{16}\.txt$/.test(entry.name))
+      .map((entry) => fs.rm(path.join(paths.stateDir, entry.name), { force: true }))
+  );
+}
+
 export async function runInit(args = {}) {
   const paths = resolvePaths({ homeDir: args.homeDir, shellRc: args.shellRc });
   const legacy = await readLegacyDefaults(paths.homeDir);
@@ -221,6 +242,7 @@ export async function runInit(args = {}) {
   await writeFileEnsured(paths.configFile, `${renderConfigFile(paths, values)}\n`);
   await writeFileEnsured(paths.installFile, `${renderInstallRecord(paths, values)}\n`);
   await copyInstallFiles(paths);
+  await resetRuntimeState(paths);
   await patchClaudeSettings(paths);
   await backupIfNeeded(paths.shellRc);
   await sanitizeShellRc(paths.shellRc);
