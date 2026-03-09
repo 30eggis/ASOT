@@ -726,6 +726,30 @@ def get_registered_tmux_entry(bridge, cwd):
     return best
 
 
+def get_latest_live_tmux_cwd(bridge):
+    state = load_tmux_state(bridge)
+    by_cwd = state.setdefault("by_cwd", {})
+    changed = False
+    live_entries = []
+
+    for saved_cwd, info in list(by_cwd.items()):
+        target = str(info.get("target", "")).strip()
+        if tmux_target_alive(bridge, target):
+            live_entries.append((int(info.get("updated_at", 0) or 0), saved_cwd))
+            continue
+        by_cwd.pop(saved_cwd, None)
+        changed = True
+
+    if changed:
+        save_tmux_state(bridge, state)
+
+    if not live_entries:
+        return ""
+
+    live_entries.sort(reverse=True)
+    return live_entries[0][1]
+
+
 def build_claude_tmux_session_name(session_id, cwd):
     resume_cwd = resolve_claude_project_dir(session_id, cwd)
     base_name = Path(resume_cwd).name or "claude"
@@ -1218,7 +1242,7 @@ def handle_mapped_reply(bridge, reply_msg_id, reply_text, in_chat, message_threa
 
 def handle_thread_reply(bridge, reply_text, in_chat, message_thread_id):
     thread_info = get_topic_binding_for_thread(bridge, in_chat, message_thread_id)
-    if not thread_info or not thread_info.get("session_id"):
+    if not thread_info:
         return False
 
     session_id = str(thread_info.get("session_id", "")).strip()
@@ -1230,6 +1254,11 @@ def handle_thread_reply(bridge, reply_text, in_chat, message_thread_id):
         reveal_registered_tmux_session(bridge, cwd)
         print(f"[TMUX] {bridge.agent} forwarded thread reply target={detail}", flush=True)
         return True
+
+    if not session_id:
+        if detail:
+            print(f"[TMUX] {bridge.agent} thread fallback unavailable: {detail}", flush=True)
+        return False
 
     if bridge.agent == "claude" and detail in {"no tmux target registered", "tmux target is not a live Claude pane"}:
         launched, launch_detail = launch_claude_tmux_resume(bridge, session_id, cwd)
@@ -1252,24 +1281,35 @@ def handle_thread_reply(bridge, reply_text, in_chat, message_thread_id):
 
 
 def handle_bridge_fallback(bridge, reply_text, in_chat, message_thread_id, candidate_count):
-    if bridge.agent != "codex" or candidate_count != 1:
+    default_cwd = ""
+    if bridge.agent == "codex":
+        if candidate_count != 1:
+            return False
+        default_cwd = bridge.env.get("CODEX_DEFAULT_CWD", str(HOME))
+    elif bridge.agent == "claude":
+        default_cwd = get_latest_live_tmux_cwd(bridge)
+        if not default_cwd:
+            return False
+    else:
         return False
 
-    default_cwd = bridge.env.get("CODEX_DEFAULT_CWD", str(HOME))
     if message_thread_id is not None:
         register_topic_binding(bridge, "", default_cwd, in_chat, message_thread_id)
 
     ok, detail = forward_reply_via_tmux(bridge, default_cwd, reply_text)
     if ok:
         reveal_registered_tmux_session(bridge, default_cwd)
-        print(f"[TMUX] codex forwarded fallback reply target={detail}", flush=True)
+        print(f"[TMUX] {bridge.agent} forwarded fallback reply target={detail}", flush=True)
         return True
 
     if detail:
-        print(f"[TMUX] codex fallback last resume: {detail}", flush=True)
+        print(f"[TMUX] {bridge.agent} fallback last resume: {detail}", flush=True)
 
-    resume_codex_last(bridge, reply_text, message_thread_id=message_thread_id)
-    return True
+    if bridge.agent == "codex":
+        resume_codex_last(bridge, reply_text, message_thread_id=message_thread_id)
+        return True
+
+    return False
 
 
 def reply_loop_for_token(bot_token, bridges, chat_token_counts, stop_event):
