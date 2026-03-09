@@ -1,18 +1,20 @@
 export function renderEnvFile(values) {
   const lines = [
-    `ASOT_TELEGRAM_BOT_TOKEN=${values.botToken}`,
-    `ASOT_TELEGRAM_CHAT_ID=${values.chatId}`,
-    `ASOT_ENABLE_CLAUDE=${values.enableClaude ? "1" : "0"}`,
-    `ASOT_ENABLE_CODEX=${values.enableCodex ? "1" : "0"}`,
-    `TELEGRAM_USE_TOPICS=${values.useTopics ? "1" : "0"}`,
-    `TELEGRAM_TOPIC_AUTO_CREATE=${values.autoCreateTopics ? "1" : "0"}`,
-    `TELEGRAM_TOPIC_PREFIX=${values.topicPrefix}`,
-    `TELEGRAM_NOTIFY_COMMENTARY=${values.notifyCommentary ? "1" : "0"}`,
-    `TELEGRAM_NOTIFY_FINAL=${values.notifyFinal ? "1" : "0"}`,
-    `TELEGRAM_NOTIFY_COMPLETE=${values.notifyComplete ? "1" : "0"}`,
-    `TELEGRAM_NOTIFY_PERMISSION=${values.notifyPermission ? "1" : "0"}`,
-    `TELEGRAM_NOTIFY_INPUT=${values.notifyInput ? "1" : "0"}`,
-    `TELEGRAM_NOTIFY_SANDBOX_ERROR=${values.notifySandboxError ? "1" : "0"}`
+    `export ASOT_TELEGRAM_BOT_TOKEN=${values.botToken}`,
+    `export ASOT_TELEGRAM_CHAT_ID=${values.chatId}`,
+    `export TELEGRAM_BOT_TOKEN=${values.botToken}`,
+    `export TELEGRAM_CHAT_ID=${values.chatId}`,
+    `export ASOT_ENABLE_CLAUDE=${values.enableClaude ? "1" : "0"}`,
+    `export ASOT_ENABLE_CODEX=${values.enableCodex ? "1" : "0"}`,
+    `export TELEGRAM_USE_TOPICS=${values.useTopics ? "1" : "0"}`,
+    `export TELEGRAM_TOPIC_AUTO_CREATE=${values.autoCreateTopics ? "1" : "0"}`,
+    `export TELEGRAM_TOPIC_PREFIX=${values.topicPrefix}`,
+    `export TELEGRAM_NOTIFY_COMMENTARY=${values.notifyCommentary ? "1" : "0"}`,
+    `export TELEGRAM_NOTIFY_FINAL=${values.notifyFinal ? "1" : "0"}`,
+    `export TELEGRAM_NOTIFY_COMPLETE=${values.notifyComplete ? "1" : "0"}`,
+    `export TELEGRAM_NOTIFY_PERMISSION=${values.notifyPermission ? "1" : "0"}`,
+    `export TELEGRAM_NOTIFY_INPUT=${values.notifyInput ? "1" : "0"}`,
+    `export TELEGRAM_NOTIFY_SANDBOX_ERROR=${values.notifySandboxError ? "1" : "0"}`
   ];
   return `${lines.join("\n")}\n`;
 }
@@ -144,4 +146,3 @@ export function buildClaudeHooksConfig(paths) {
     ]
   };
 }
-

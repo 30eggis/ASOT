@@ -6,7 +6,11 @@ ASOT_CONFIG_DIR="${ASOT_CONFIG_DIR:-$HOME/.config/asot}"
 ASOT_SHARE_DIR="${ASOT_SHARE_DIR:-$HOME/.local/share/asot}"
 ASOT_STATE_DIR="${ASOT_STATE_DIR:-$HOME/.local/state/asot}"
 ENV_FILE="$ASOT_CONFIG_DIR/asot.env"
-[[ -f "$ENV_FILE" ]] && source "$ENV_FILE"
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  source "$ENV_FILE"
+  set +a
+fi
 export ASOT_AGENT="claude"
 export ASOT_SHARE_DIR ASOT_STATE_DIR ASOT_CONFIG_DIR
 
