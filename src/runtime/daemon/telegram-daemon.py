@@ -587,14 +587,59 @@ def tmux_session_has_client(bridge, session_name):
         return False
     try:
         result = subprocess.run(
-            [bridge.tmux_bin, "list-clients", "-F", "#{client_session}"],
+            [bridge.tmux_bin, "list-clients", "-F", "#{client_session}\t#{client_tty}\t#{client_pid}"],
             capture_output=True,
             text=True,
             timeout=5,
         )
         if result.returncode != 0:
             return False
-        return any(line.strip() == session_name for line in result.stdout.splitlines())
+
+        for raw_line in result.stdout.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            parts = line.split("\t")
+            client_session = parts[0].strip() if len(parts) > 0 else ""
+            client_tty = parts[1].strip() if len(parts) > 1 else ""
+            client_pid = parts[2].strip() if len(parts) > 2 else ""
+            if client_session != session_name:
+                continue
+
+            try:
+                pid = int(client_pid)
+            except Exception:
+                continue
+
+            if pid <= 0:
+                continue
+
+            try:
+                os.kill(pid, 0)
+            except Exception:
+                continue
+
+            if client_tty and not os.path.exists(client_tty):
+                continue
+
+            try:
+                ps_result = subprocess.run(
+                    ["ps", "-p", str(pid), "-o", "comm=", "-o", "args="],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+            except Exception:
+                ps_result = None
+
+            if ps_result and ps_result.returncode == 0:
+                proc_info = ps_result.stdout.strip().lower()
+                if "tmux" not in proc_info:
+                    continue
+
+            return True
+
+        return False
     except Exception:
         return False
 
