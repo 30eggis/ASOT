@@ -352,6 +352,7 @@ def save_mapping(bridge, message_id, session_id, cwd, chat_id="", message_thread
     entry = {
         "session_id": str(session_id or "").strip(),
         "cwd": str(cwd or "").strip(),
+        "updated_at": int(time.time()),
     }
     if chat_id:
         entry["chat_id"] = normalize_chat_id(chat_id)
@@ -748,6 +749,42 @@ def get_latest_live_tmux_cwd(bridge):
 
     live_entries.sort(reverse=True)
     return live_entries[0][1]
+
+
+def get_latest_known_session(bridge):
+    state = load_topic_state(bridge)
+    latest = None
+    latest_updated = -1
+
+    for entry in state.get("by_session", {}).values():
+        session_id = str(entry.get("session_id", "")).strip()
+        cwd = str(entry.get("cwd", "")).strip()
+        updated_at = int(entry.get("updated_at", 0) or 0)
+        if not session_id:
+            continue
+        if updated_at > latest_updated:
+            latest = {"session_id": session_id, "cwd": cwd}
+            latest_updated = updated_at
+
+    if latest:
+        return latest
+
+    mapping = load_mapping(bridge)
+    latest_entry = None
+    latest_key = -1
+    for key, entry in mapping.items():
+        try:
+            numeric_key = int(key)
+        except Exception:
+            continue
+        session_id = str(entry.get("session_id", "")).strip()
+        cwd = str(entry.get("cwd", "")).strip()
+        if not session_id:
+            continue
+        if numeric_key > latest_key:
+            latest_entry = {"session_id": session_id, "cwd": cwd}
+            latest_key = numeric_key
+    return latest_entry
 
 
 def build_claude_tmux_session_name(session_id, cwd):
@@ -1282,6 +1319,7 @@ def handle_thread_reply(bridge, reply_text, in_chat, message_thread_id):
 
 def handle_bridge_fallback(bridge, reply_text, in_chat, message_thread_id, candidate_count):
     default_cwd = ""
+    default_session_id = ""
     if bridge.agent == "codex":
         if candidate_count != 1:
             return False
@@ -1289,12 +1327,17 @@ def handle_bridge_fallback(bridge, reply_text, in_chat, message_thread_id, candi
     elif bridge.agent == "claude":
         default_cwd = get_latest_live_tmux_cwd(bridge)
         if not default_cwd:
+            latest_session = get_latest_known_session(bridge)
+            if latest_session:
+                default_session_id = str(latest_session.get("session_id", "")).strip()
+                default_cwd = str(latest_session.get("cwd", "")).strip()
+        if not default_cwd:
             return False
     else:
         return False
 
     if message_thread_id is not None:
-        register_topic_binding(bridge, "", default_cwd, in_chat, message_thread_id)
+        register_topic_binding(bridge, default_session_id, default_cwd, in_chat, message_thread_id)
 
     ok, detail = forward_reply_via_tmux(bridge, default_cwd, reply_text)
     if ok:
@@ -1307,6 +1350,25 @@ def handle_bridge_fallback(bridge, reply_text, in_chat, message_thread_id, candi
 
     if bridge.agent == "codex":
         resume_codex_last(bridge, reply_text, message_thread_id=message_thread_id)
+        return True
+
+    if default_session_id:
+        launched, launch_detail = launch_claude_tmux_resume(bridge, default_session_id, default_cwd)
+        if launched:
+            ok, detail = forward_reply_via_tmux(bridge, default_cwd, reply_text)
+            if ok:
+                print(f"[TMUX] claude auto-resumed fallback target={detail}", flush=True)
+                return True
+        if launch_detail:
+            print(f"[TMUX] claude auto-resume fallback failed: {launch_detail}", flush=True)
+        resume_claude_session(
+            bridge,
+            default_session_id,
+            default_cwd,
+            reply_text,
+            in_chat,
+            message_thread_id=message_thread_id,
+        )
         return True
 
     return False
