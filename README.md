@@ -201,6 +201,8 @@ ASOT installs a managed shell block that defines:
 
 These are installed into an ASOT-owned block inside `~/.zshrc`.
 
+`cld` force-restarts the Claude tmux session for the current working directory before launching again.
+
 ## Safety
 
 ASOT is designed to avoid touching a running personal setup unless you explicitly run its installer against your real home directory.
