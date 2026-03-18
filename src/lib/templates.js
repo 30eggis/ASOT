@@ -36,7 +36,7 @@ cld() {
   local session_name
   session_name="claude_$(printf '%s' "$(basename "$PWD")" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_' | sed 's/^_\\+//; s/_\\+$//')"
   tmux kill-session -t "$session_name" >/dev/null 2>&1 || true
-  cl --dangerously-skip-permissions "$@"
+  cl "$@"
 }
 
 cdx() {

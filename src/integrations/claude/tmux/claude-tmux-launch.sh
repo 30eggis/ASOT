@@ -74,12 +74,7 @@ fi
 if tmux has-session -t "$session_name" 2>/dev/null; then
   main_target="$(tmux list-panes -t "$session_name" -F '#{pane_id}' | head -n 1)"
   "$REGISTER_SCRIPT" --cwd "$cwd" --target "$main_target" >/dev/null 2>&1 || true
-  if [[ "$attach_mode" == "1" ]]; then
-    exec tmux attach -t "$session_name"
-  fi
-  echo "session already exists: $session_name" >&2
-  echo "attach: tmux attach -t $session_name"
-  exit 0
+  exec tmux attach -t "$session_name"
 fi
 
 tmux new-session -d -s "$session_name" -c "$cwd" "$CLAUDE_BIN" "${claude_args[@]}"
